@@ -1,0 +1,57 @@
+# Byte-compiled / cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.env/
+.venv/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
+tmp/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
+*.sock
+*.tmp
+*.bak
+*.swp
+.docker/
+docker-compose.override.yml
+
+# Model artifacts
+*.pkl
+*.joblib
+*.h5
+*.onnx
+
+# Data outputs
+data/
+datasets/
+*.csv
+*.parquet
+
+# IDE
+.vscode/
+.idea/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# MLflow / experiments (if added later)
+mlruns/
+
+# Node (if dashboard frontend later added)
+node_modules/

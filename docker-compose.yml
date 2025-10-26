@@ -1,0 +1,78 @@
+version: "3.8"
+services:
+  zookeeper:
+    image: bitnami/zookeeper:3.8
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: bitnami/kafka:3
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  producer:
+    build:
+      context: ./producer
+    volumes:
+      - ./producer:/app
+    depends_on:
+      - kafka
+
+  trainer:
+    build:
+      context: ./trainer
+    volumes:
+      - ./trainer:/app
+    command: ["python", "train.py"]
+    depends_on:
+      - kafka
+    restart: "no"
+
+  stream_processor:
+    build:
+      context: ./stream_processor
+    volumes:
+      - ./stream_processor:/app
+    depends_on:
+      - kafka
+      - redis
+      - trainer
+    environment:
+      - KAFKA_BOOTSTRAP=kafka:9092
+      - REDIS_HOST=redis
+
+  model_server:
+    build:
+      context: ./model_server
+    volumes:
+      - ./model_server:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  dashboard:
+    build:
+      context: ./dashboard
+    volumes:
+      - ./dashboard:/app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - model_server
+      - redis
