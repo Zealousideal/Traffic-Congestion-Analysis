@@ -10,11 +10,16 @@ KAFKA = os.environ.get("KAFKA_BOOTSTRAP", "kafka:9092")
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 TOPIC = "gps.pings"
 
-consumer = KafkaConsumer(TOPIC, bootstrap_servers=[KAFKA],
-                         value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-                         auto_offset_reset='earliest',
-                         enable_auto_commit=True,
-                         consumer_timeout_ms=1000)
+consumer = KafkaConsumer(
+    TOPIC,
+    bootstrap_servers=[KAFKA],
+    value_deserializer=lambda x: json.loads(x.decode('utf-8')),
+    auto_offset_reset='earliest',
+    enable_auto_commit=True,
+    consumer_timeout_ms=10000,
+    api_version=(0, 10)  # ✅ Important fix
+)
+
 
 r = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
 

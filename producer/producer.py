@@ -9,8 +9,14 @@ import os
 KAFKA = os.environ.get("KAFKA_BOOTSTRAP", "kafka:9092")
 TOPIC = "gps.pings"
 
-producer = KafkaProducer(bootstrap_servers=[KAFKA],
-                         value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+producer = KafkaProducer(
+    bootstrap_servers=[KAFKA],
+    value_serializer=lambda x: json.dumps(x).encode('utf-8'),
+    retries=5,
+    acks='all',
+    api_version=(0, 10)  # ✅ Important fix
+)
+
 
 def generate_ping(vehicle_id, base_lat, base_lon):
     lat = base_lat + random.uniform(-0.01, 0.01)
