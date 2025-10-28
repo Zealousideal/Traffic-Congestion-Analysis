@@ -41,8 +41,6 @@ def generate_dataset(n_segments=200, days=7):
     return pd.DataFrame(rows)
 
 def train_and_save():
-    print("Generating synthetic dataset (this may take a moment)...")
-    
     # Simulates 500 road segments for 20 days --> millions of data points
     df = generate_dataset(n_segments=500, days=20)  # smaller for speed
     features = ["avg_speed", "vehicle_count", "hour", "dayofweek"]
@@ -61,3 +59,5 @@ def train_and_save():
 
 if __name__ == "__main__":
     train_and_save()
+
+
