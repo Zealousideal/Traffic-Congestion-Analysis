@@ -42,7 +42,7 @@ def main():
         ("Kolkata", 22.5726, 88.3639),
     ]
 
-    num_vehicles_per_city = 1000  
+    num_vehicles_per_city = 10000  
     spread = 0.02  #  control spread around city center
 
     total = num_vehicles_per_city * len(centers)
@@ -65,7 +65,7 @@ def main():
             msg = generate_ping(v[0], v[1], v[2])
             producer.send(TOPIC, msg)
         producer.flush()
-        time.sleep(1)  # ✅ ~4000 messages per second (scalable)
+        time.sleep(1)  #  ~4000 messages per second (scalable)
 
 if __name__ == "__main__":
     main()

@@ -17,7 +17,7 @@ consumer = KafkaConsumer(
     auto_offset_reset='earliest',
     enable_auto_commit=True,
     consumer_timeout_ms=10000,
-    api_version=(0, 10)  # ✅ Important fix
+    api_version=(0, 10)  
 )
 
 r = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
