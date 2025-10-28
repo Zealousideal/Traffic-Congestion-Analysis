@@ -1,5 +1,5 @@
 """
-Simple GPS simulator that produces JSON pings to Kafka topic 'gps.pings'.
+Simple GPS simulator that produces JSON pings to Kafka topic 'gps.pings'. This is the Kafka producer 
 """
 import json, time, random
 from datetime import datetime, timezone
@@ -14,42 +14,58 @@ producer = KafkaProducer(
     value_serializer=lambda x: json.dumps(x).encode('utf-8'),
     retries=5,
     acks='all',
-    api_version=(0, 10)  # ✅ Important fix
+    api_version=(0, 10)  # Important fix
 )
 
+# Generate fake GPS pings
+def generate_ping(vehicle_id, lat, lon):
+    lat_jitter = random.uniform(-0.01, 0.01)
+    lon_jitter = random.uniform(-0.01, 0.01)
 
-def generate_ping(vehicle_id, base_lat, base_lon):
-    lat = base_lat + random.uniform(-0.01, 0.01)
-    lon = base_lon + random.uniform(-0.01, 0.01)
-    speed = max(0.0, random.gauss(30, 12))  # kmph
     return {
         "vehicle_id": vehicle_id,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "lat": lat,
-        "lon": lon,
-        "speed_kmph": round(speed, 2),
+        "lat": lat + lat_jitter,
+        "lon": lon + lon_jitter,
+        "speed_kmph": round(max(0.0, random.gauss(30, 12)), 2),
         "source": "sim"
     }
 
 def main():
-    # create N vehicles in area roughly around a city centre lat/lon
     vehicles = []
-    centers = [
-        (12.9716, 77.5946), # sample center (Bengaluru)
-        (12.9610, 77.5800),
-        (12.9850, 77.6000)
-    ]
-    for i in range(100):
-        c = centers[i % len(centers)]
-        vehicles.append((f"veh_{i}", c[0] + random.uniform(-0.02,0.02), c[1] + random.uniform(-0.02,0.02)))
 
-    print(f"Producing to {KAFKA} topic {TOPIC}")
+    # Multi-city centers added + named for debugging
+    centers = [
+        ("Bengaluru", 12.9716, 77.5946),
+        ("Delhi", 28.6139, 77.2090),
+        ("Mumbai", 19.0760, 72.8777),
+        ("Kolkata", 22.5726, 88.3639),
+    ]
+
+    num_vehicles_per_city = 1000  
+    spread = 0.02  #  control spread around city center
+
+    total = num_vehicles_per_city * len(centers)
+
+    # Proper distribution among multiple cities
+    for city_name, lat, lon in centers:
+        for i in range(num_vehicles_per_city):
+            vehicles.append((
+                f"{city_name}_veh_{i}",
+                lat + random.uniform(-spread, spread),  # use spread correctly
+                lon + random.uniform(-spread, spread)
+            ))
+
+    print(f"🚗 Total Vehicles Streaming: {total}")
+    print(f"Producing live traffic to Kafka → {TOPIC}")
+
+    # Stream forever
     while True:
         for v in vehicles:
             msg = generate_ping(v[0], v[1], v[2])
             producer.send(TOPIC, msg)
         producer.flush()
-        time.sleep(1)  # 1 second per batch
+        time.sleep(1)  # ✅ ~4000 messages per second (scalable)
 
 if __name__ == "__main__":
     main()
