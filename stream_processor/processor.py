@@ -20,7 +20,6 @@ consumer = KafkaConsumer(
     api_version=(0, 10)  # ✅ Important fix
 )
 
-
 r = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
 
 # Load model (trainer should have produced model.pkl)
@@ -36,7 +35,7 @@ except Exception as e:
     print("Could not load model:", e)
     model = None
 
-# in-memory sliding windows per segment (deque of (timestamp, speed))
+# in-memory sliding windows per segment, stimulating real-time segment intelligence
 WINDOW_MINUTES = 5
 buffers = defaultdict(lambda: deque())
 
@@ -47,12 +46,15 @@ def latlon_to_segment(lat, lon):
     return f"S_{lat_r}_{lon_r}"
 
 def update_buffer(seg, ts, speed):
-    dq = buffers[seg]
+    dq = buffers[seg] # sliding window of speed readings for each segment
+
+    # Keep only last 5 minutes of data
     dq.append((ts, speed))
     cutoff = ts - timedelta(minutes=WINDOW_MINUTES)
     while dq and dq[0][0] < cutoff:
         dq.popleft()
 
+# Ensures feature consistency with the trained model --> the input to the model
 def compute_features(seg):
     dq = buffers[seg]
     if not dq:
@@ -90,23 +92,23 @@ def predict_prob(features):
 def main_loop():
     print("Starting consumer loop, reading from", KAFKA)
     while True:
-        for msg in consumer:
+        for msg in consumer: # Message arrives via the cars (gps pings)
             try:
                 v = msg.value
-                ts = datetime.fromisoformat(v["timestamp"].replace("Z","+00:00"))
-                seg = latlon_to_segment(v["lat"], v["lon"])
-                update_buffer(seg, ts, v["speed_kmph"])
-                feats = compute_features(seg)
+                ts = datetime.fromisoformat(v["timestamp"].replace("Z","+00:00")) # Get timestamp
+                seg = latlon_to_segment(v["lat"], v["lon"]) # Get segment id via lat-lon calculation
+                update_buffer(seg, ts, v["speed_kmph"]) # Keeping only last 5 minutes of data
+                feats = compute_features(seg) # Compute the features like avg_speed, vehicle_count, hour and the time of day
                 if feats is None:
                     continue
-                prob = predict_prob(feats)
+                prob = predict_prob(feats) # Predict traffic congestion using the model
                 payload = {
                     "ts": datetime.now(timezone.utc).isoformat(),
                     "avg_speed": round(feats["avg_speed"],2),
                     "vehicle_count": feats["vehicle_count"],
                     "congestion_prob": round(prob,3)
                 }
-                store_prediction(seg, payload)
+                store_prediction(seg, payload) # Store the data in redis and give it to dashboard
             except Exception as e:
                 print("Error processing message:", e)
         # short sleep to avoid tight loop when consumer_timeout reached

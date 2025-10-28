@@ -46,7 +46,7 @@ def train_and_save():
     # Simulates 500 road segments for 20 days --> millions of data points
     df = generate_dataset(n_segments=500, days=20)  # smaller for speed
     features = ["avg_speed", "vehicle_count", "hour", "dayofweek"]
-    
+
     X = df[features]
     y = df["label"]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
